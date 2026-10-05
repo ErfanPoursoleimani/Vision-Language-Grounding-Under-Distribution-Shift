@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vlm-grounding"
+version = "0.0.1"
+description = "Vision-Language Grounding Under Distribution Shift: counterfactual evaluation and lightweight adaptation of open VLMs"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pillow", "pandas", "pyyaml", "tqdm", "matplotlib"]
+
+[project.optional-dependencies]
+models = ["torch", "transformers", "accelerate", "bitsandbytes", "peft"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

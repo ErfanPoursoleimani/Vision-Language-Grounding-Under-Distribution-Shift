@@ -1,0 +1,72 @@
+{
+  "config": {
+    "name": "pope_style_blip2_dev",
+    "task": "pope_style",
+    "model": {
+      "type": "hf_blip2",
+      "name": "blip2-opt-2.7b-nf4",
+      "params": {
+        "hf_id": "Salesforce/blip2-opt-2.7b",
+        "revision": null,
+        "quantize": "4bit",
+        "quantize_vision": false,
+        "dtype": "float16",
+        "device": 0,
+        "blind_gray": 128,
+        "question_template": "Question: {q} Answer:"
+      }
+    },
+    "dataset": {
+      "root": "data/coco",
+      "split": "val2017",
+      "split_seed": 0,
+      "our_split": "dev",
+      "n_images": 200,
+      "seed": 0
+    },
+    "probe": {
+      "templates": [
+        "Is there {a_obj} in the image?",
+        "Does this image contain {a_obj}?",
+        "Can you see {a_obj} in this picture?"
+      ],
+      "threshold": 0.0,
+      "blind_baseline": true
+    },
+    "output": {
+      "top_k_failures": 50
+    }
+  },
+  "model_metadata": {
+    "name": "blip2-opt-2.7b-nf4",
+    "hf_id": "Salesforce/blip2-opt-2.7b",
+    "revision": null,
+    "quantize": "4bit",
+    "quantize_vision": false,
+    "dtype": "float16",
+    "device": 0,
+    "blind_gray": 128,
+    "question_template": "Question: {q} Answer:"
+  },
+  "git_commit": "b417e2709c80c4493b015c34f446e1e16f1aa171",
+  "python": "3.12.10",
+  "runtime": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.18.0",
+    "resolved_commit_hash": null,
+    "quantization_census": {
+      "vision_model:Linear": 156,
+      "qformer:Linear": 96,
+      "language_projection:Linear": 1,
+      "language_model:Linear4bit": 192,
+      "language_model:Linear": 1
+    }
+  },
+  "n_images": 200,
+  "n_items": 2400,
+  "n_rows": 7200,
+  "seconds": 1080.357075100008,
+  "cache_hits": 8364,
+  "cache_misses": 6036,
+  "dataset_note": "POPE-style probes built from COCO instance annotations; not the official POPE files"
+}

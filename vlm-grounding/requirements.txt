@@ -1,0 +1,14 @@
+# Core (enough to run the metric code and the test suite)
+numpy
+pillow
+pandas
+pyyaml
+tqdm
+matplotlib
+pytest
+# Model backends (install on a machine with a suitable GPU; versions to be pinned after first successful run)
+# torch
+# transformers
+# accelerate
+# bitsandbytes
+# peft

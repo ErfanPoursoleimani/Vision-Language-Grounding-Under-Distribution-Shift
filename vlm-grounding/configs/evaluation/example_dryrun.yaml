@@ -1,0 +1,8 @@
+name: example_dryrun
+task: pope_style
+model:
+  type: dummy_brightness
+  name: dummy
+dataset:
+  root: data/coco
+  split: val2017

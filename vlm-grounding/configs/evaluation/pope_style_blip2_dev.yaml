@@ -1,0 +1,20 @@
+name: pope_style_blip2_dev
+task: pope_style
+model:
+  from_file: configs/models/blip2_opt_2p7b.yaml
+dataset:
+  root: data/coco
+  split: val2017
+  split_seed: 0
+  our_split: dev
+  n_images: 200
+  seed: 0
+probe:
+  templates:
+    - "Is there {a_obj} in the image?"
+    - "Does this image contain {a_obj}?"
+    - "Can you see {a_obj} in this picture?"
+  threshold: 0.0
+  blind_baseline: true
+output:
+  top_k_failures: 50

@@ -1,0 +1,7 @@
+# TEMPLATE - backend wrapper not implemented yet (phase 2b). 7B in 4-bit is tight on 6 GB; measure first.
+type: hf_llava
+name: llava-1.5-7b-4bit
+params:
+  hf_id: llava-hf/llava-1.5-7b-hf
+  revision: null
+  quantization: 4bit

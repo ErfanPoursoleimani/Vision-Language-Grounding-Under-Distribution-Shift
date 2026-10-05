@@ -1,0 +1,76 @@
+{
+  "model": {
+    "name": "blip2-opt-2.7b-nf4",
+    "hf_id": "Salesforce/blip2-opt-2.7b",
+    "revision": null,
+    "quantize": "4bit",
+    "quantize_vision": false,
+    "dtype": "float16",
+    "device": 0,
+    "blind_gray": 128,
+    "question_template": "Question: {q} Answer:"
+  },
+  "checks": {
+    "log-probs finite and <= 0": {
+      "pass": true,
+      "detail": ""
+    },
+    "p(Yes)+p(No) <= 1": {
+      "pass": true,
+      "detail": "0.4577"
+    },
+    "single-forward log-odds == score(Yes)-score(No)": {
+      "pass": true,
+      "detail": "-0.6641 vs -0.6641"
+    },
+    "blind baseline finite": {
+      "pass": true,
+      "detail": "-0.0859"
+    },
+    "greedy decoding deterministic": {
+      "pass": true,
+      "detail": "'No' vs 'No'"
+    },
+    "batch == single decoding": {
+      "pass": true,
+      "detail": "['No', 'No'] vs ['No', 'No']"
+    }
+  },
+  "outputs": {
+    "caption_A": "a red square on a white background",
+    "vqa_A": "No",
+    "question": "Is there a person in the image?",
+    "score_yes": -1.8608171939849854,
+    "score_no": -1.1967546939849854,
+    "logodds_single_forward": -0.6640625,
+    "logodds_blind": -0.0859375,
+    "batch": [
+      "No",
+      "No"
+    ],
+    "single": [
+      "No",
+      "No"
+    ]
+  },
+  "vram_used_by_others_before_load_gib": 0.96630859375,
+  "runtime": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.18.0",
+    "resolved_commit_hash": null,
+    "quantization_census": {
+      "vision_model:Linear": 156,
+      "qformer:Linear": 96,
+      "language_projection:Linear": 1,
+      "language_model:Linear4bit": 192,
+      "language_model:Linear": 1
+    }
+  },
+  "load_seconds": 1219.086839800002,
+  "vram_after_load_gib": 3.695446491241455,
+  "vram_peak_during_load_gib": 3.695446491241455,
+  "yes_no_probes_per_s": 8.37654513694565,
+  "vram_peak_total_gib": 3.740237236022949,
+  "vram_reserved_gib": 3.796875,
+  "all_checks_passed": true
+}

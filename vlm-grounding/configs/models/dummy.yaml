@@ -1,0 +1,3 @@
+# Plumbing test only. Never used for reported results (run_evaluation refuses to write results/ for it).
+type: dummy_brightness
+name: dummy

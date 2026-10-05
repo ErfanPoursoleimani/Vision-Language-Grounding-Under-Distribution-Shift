@@ -1,0 +1,6 @@
+# TEMPLATE - backend wrapper not implemented yet (phase 2b).
+type: hf_clip
+name: clip-vit-b32
+params:
+  hf_id: openai/clip-vit-base-patch32
+  revision: null

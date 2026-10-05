@@ -1,0 +1,12 @@
+# BLIP-2 OPT-2.7B. Backend written but not yet run on a GPU: run scripts/smoke_model.py first.
+type: hf_blip2
+name: blip2-opt-2.7b-nf4
+params:
+  hf_id: Salesforce/blip2-opt-2.7b
+  revision: null          # after the first successful load, copy 'resolved_commit_hash' from the smoke output here
+  quantize: 4bit          # none | 8bit | 4bit  (language model only; vision tower stays fp16 unless quantize_vision)
+  quantize_vision: false
+  dtype: float16
+  device: 0
+  blind_gray: 128         # 'no image' baseline = neutral gray image (approximation, see protocol)
+  question_template: "Question: {q} Answer:"

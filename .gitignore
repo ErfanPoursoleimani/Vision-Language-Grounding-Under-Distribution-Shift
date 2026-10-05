@@ -1,0 +1,18 @@
+# datasets
+data/
+datasets/
+
+# Python
+.venv/
+__pycache__/
+
+# models
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# databases
+*.db
+*.sqlite
+*.sqlite3
