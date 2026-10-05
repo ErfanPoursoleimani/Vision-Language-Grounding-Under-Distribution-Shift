@@ -1,7 +1,150 @@
-.venv/
+# ================================
+# Python
+# ================================
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+.python-version
+
+# Packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# ================================
+# Environment / secrets
+# ================================
+.env
+.env.*
+!.env.example
+
+# ================================
+# Datasets / large data
+# ================================
 data/
-cache/
+datasets/
+dataset/
+raw_data/
+processed_data/
+downloads/
+
+# Common dataset files
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Large data formats
+*.parquet
+*.arrow
+*.feather
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.pickle
+
+# Images / videos generated or downloaded as data
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# ================================
+# ML model weights / checkpoints
+# ================================
+checkpoints/
+checkpoint/
+weights/
+models/
+pretrained/
+pretrained_models/
+
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.onnx
+*.gguf
+
+# ================================
+# Hugging Face / ML caches
+# ================================
+.cache/
+huggingface/
+.huggingface/
+transformers_cache/
+torch_cache/
+
+# ================================
+# Experiment outputs
+# ================================
+outputs/
+output/
+results/
+runs/
+logs/
+wandb/
+mlruns/
+tensorboard/
+*.log
+
+# ================================
+# Jupyter
+# ================================
+.ipynb_checkpoints/
+
+# ================================
+# IDEs / editors
+# ================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ================================
+# OS
+# ================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ================================
+# Temporary files
+# ================================
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ================================
+# Coverage / testing
+# ================================
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ================================
+# Local databases
+# ================================
+*.db
 *.sqlite
-.venv
+*.sqlite3
