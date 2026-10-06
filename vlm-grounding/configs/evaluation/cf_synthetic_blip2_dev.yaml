@@ -1,0 +1,13 @@
+# Counterfactual evaluation on synthetic scenes (exact ground truth). DEV split: used to calibrate thresholds.
+name: cf_synthetic_blip2_dev
+task: counterfactual_synthetic
+model:
+  from_file: configs/models/blip2_opt_2p7b.yaml
+dataset:
+  our_split: dev
+  n_scenes: 40        # ~12 pairs/scene, ~4 probes/pair, 3 paraphrases; cached images/questions are reused
+  seed: 0
+  split_seed: 0
+probe:
+  templates: [0, 1, 2]
+  blind_baseline: true

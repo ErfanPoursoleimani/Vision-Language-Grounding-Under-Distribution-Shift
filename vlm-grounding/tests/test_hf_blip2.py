@@ -34,3 +34,14 @@ def test_helpful_error_without_torch():
 def test_smoke_script_parses():
     import py_compile
     py_compile.compile("scripts/smoke_model.py", doraise=True)
+
+
+def test_cached_commit_hash(tmp_path):
+    from src.models.hf_blip2 import cached_commit_hash
+    repo = tmp_path / "models--org--name"
+    (repo / "refs").mkdir(parents=True)
+    (repo / "snapshots" / "abc123").mkdir(parents=True)
+    assert cached_commit_hash("org/name", hub_cache=str(tmp_path)) == "abc123"  # single snapshot fallback
+    (repo / "refs" / "main").write_text("def456\n")
+    assert cached_commit_hash("org/name", hub_cache=str(tmp_path)) == "def456"
+    assert cached_commit_hash("org/missing", hub_cache=str(tmp_path)) is None

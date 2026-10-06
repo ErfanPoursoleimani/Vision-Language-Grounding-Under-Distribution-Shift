@@ -62,7 +62,7 @@ def main() -> int:
         sys.exit("no CUDA device visible; nothing measured.")
 
     from PIL import Image
-    free0, total0 = torch.cuda.mem_get_info()  # before any model is loaded: VRAM already taken by other processes
+    used_before_mib = env_report.smi_memory_used_mib()  # read BEFORE touching CUDA (excludes our own context)
     cfg = yaml.safe_load(Path(a.config).read_text())
     model = build_model(cfg if "type" in cfg else cfg["model"])
     if model.metadata().get("testing_only"):
@@ -88,7 +88,7 @@ def main() -> int:
     records, max_ok = run_ladder(measure, sizes)
     free, total = torch.cuda.mem_get_info()
     result = {"model": model.metadata(), "gpu": torch.cuda.get_device_name(0), "total_gib": total / 2 ** 30,
-              "used_by_others_before_load_gib": (total0 - free0) / 2 ** 30,
+              "nvidia_smi_used_mib_before_cuda_init": used_before_mib,
               "free_gib_after": free / 2 ** 30, "max_batch_ok": max_ok, "records": records,
               "max_new_tokens": a.max_new_tokens, "torch": torch.__version__}
     text = json.dumps(result, indent=2, default=str)

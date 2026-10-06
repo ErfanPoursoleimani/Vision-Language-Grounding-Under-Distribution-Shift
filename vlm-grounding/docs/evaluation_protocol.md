@@ -19,7 +19,7 @@ Three output modes, always reported separately: **probe** (closed yes/no, count,
 
 ## 4. Counterfactual pair construction
 **Edit types:** removal, insertion, replacement, color change, spatial rearrangement, crop, blur, masking, background replacement.
-**Sources:** (A) *Synthetic renderer* — exact ground truth, no editing artifacts; primary source for color/count/position/relation. (B) *Natural images* — instance masks/boxes from COCO/VG; removal via inpainting, recolor via masked hue shift, insertion/rearrangement via copy-paste, background via mask compositing. Specific inpainting/segmentation tools are chosen and verified in phase 5.
+**Sources:** (A) *Synthetic renderer* (`src/perturbations/synthetic.py`, implemented) — exact ground truth, no editing artifacts; primary source for color/shape/position/relation. Unique colour per object so an independent pixel-based verifier can check every edit; controls are made pure by dropping foil/other probes that mention an edited object's colour; the fraction of controls with area within ±20% of the edited object is reported (about 40–50% in the first check), with a matched-only SFR as a robustness view. Probe-level definitions: AFR/SFR/CSS/CPA/persistence/shift-AUROC (see `experiments/counterfactual/synthetic_v1_plan.md`). Count edits are not implemented yet. (B) *Natural images* — instance masks/boxes from COCO/VG; removal via inpainting, recolor via masked hue shift, insertion/rearrangement via copy-paste, background via mask compositing. Specific inpainting/segmentation tools are chosen and verified in phase 5.
 **Pair record:** `{pair_id, source_id, edit_type, concept, mask_area_frac, gold_orig, gold_cf, control_id}`.
 **Validity checks (all reported):**
 1. Automatic: an open-vocabulary detector *not among the evaluated models* no longer finds the removed concept (and still finds others).
@@ -31,7 +31,7 @@ Three output modes, always reported separately: **probe** (closed yes/no, count,
 ## 5. Metrics
 | ID | Name | Definition |
 |---|---|---|
-| M1 | Probe accuracy, yes-ratio | POPE-style existence probes on originals and edits; yes-ratio exposes answer bias. |
+| M1 | Probe AUROC, calibrated accuracy, yes-ratio | POPE-style existence probes on originals and edits. **Headline = AUROC** (threshold-free) and accuracy at per-template thresholds fit on dev and frozen before any test run; raw threshold-0 accuracy is reported but flagged, because paraphrases shift the yes-bias (observed on dev: same AUROC, accuracy 0.56–0.70). Yes-ratio exposes answer bias. |
 | M2 | Counterfactual pair accuracy (CPA) | P(correct on `I` **and** on `I^{-c}`). Control-pair idea follows HallusionBench. |
 | M3 | Sensitivity–invariance | AFR = P(answer changes ∣ relevant edit); SFR = P(answer changes ∣ control edit); **CSS = AFR − SFR**. Report with M2 because AFR counts any flip. |
 | M4 | Likelihood sensitivity | `S_global`, `S_local` (§3) with bootstrap CIs. Cheap, deterministic, no generation needed. |
@@ -52,6 +52,10 @@ Three output modes, always reported separately: **probe** (closed yes/no, count,
 | Adversarial/perturbation | Corruption ladders on IID images (blur, noise, crop, occlusion, background). |
 
 Rules: splits are by **image id** (and by source image for all derived edits); adaptation uses COCO train only; all tuning (λ, margin, rank, steps) on a validation split disjoint from every test split; each test split is run once per frozen configuration and every test run is logged (`results/**/manifest.json`); prompt wording is fixed on validation.
+
+**Blind-baseline caveat (added after the first dev run).** A gray image measures the response to *absence of evidence*, not necessarily the language prior (BLIP-2 answered "no" to ~92% of gray-image questions). Scene-conditioned priors need a different control: same scene with the target object edited out (phase 5), and/or a mismatched-image control. Failure-case labels such as `language_prior_candidate` are therefore weak evidence.
+
+**Overlapping negatives.** Popular and adversarial negatives overlap (457 of 1,332 unique negative pairs appeared in more than one kind on dev); compare kinds with paired statistics on the shared items, not as independent samples.
 
 ## 7. Baselines
 No adaptation; blind/no-image; ordinary LoRA instruction tuning (matched images, steps, rank); VCD (training-free); OPERA if hardware/code compatibility allows; at least one training-based mitigation (e.g. preference-style) if feasible. Candidate `L_grounding` forms to *compare, not assume*: (a) margin on likelihood drop, (b) unlikelihood on the original answer under `I^{-c}`, (c) preference pairs (chosen = image-consistent, rejected = counterfactual-consistent), each with an **invariance term** on control edits to prevent learning edit-artifact shortcuts.

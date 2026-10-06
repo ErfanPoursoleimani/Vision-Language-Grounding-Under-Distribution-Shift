@@ -23,6 +23,26 @@ from PIL import Image
 from .base import Capability, VLM, VLMOutput
 from .registry import register_model
 
+import os
+from pathlib import Path
+
+
+def cached_commit_hash(hf_id: str, revision: Optional[str] = None, hub_cache: Optional[str] = None) -> Optional[str]:
+    """Commit hash of a model snapshot in the local Hugging Face cache (refs/<revision or main>, else the only snapshot).
+    Returns None if it cannot be determined; pass the value as `revision` in the model config to pin it."""
+    base = hub_cache or os.environ.get("HF_HUB_CACHE") or os.path.join(
+        os.environ.get("HF_HOME", os.path.join(os.path.expanduser("~"), ".cache", "huggingface")), "hub")
+    repo = Path(base) / ("models--" + hf_id.replace("/", "--"))
+    ref = repo / "refs" / (revision or "main")
+    try:
+        if ref.is_file():
+            return ref.read_text().strip() or None
+        snaps = [d.name for d in (repo / "snapshots").iterdir() if d.is_dir()]
+        return snaps[0] if len(snaps) == 1 else None
+    except OSError:
+        return None
+
+
 _VISION_SKIP = ["vision_model", "qformer", "language_projection"]
 
 
@@ -95,7 +115,8 @@ class HFBlip2(VLM):
         self._load()
         import transformers
         return {"torch": self._torch.__version__, "transformers": transformers.__version__,
-                "resolved_commit_hash": getattr(self._model.config, "_commit_hash", None),
+                "resolved_commit_hash": (getattr(self._model.config, "_commit_hash", None)
+                                         or cached_commit_hash(self.config["hf_id"], self.config["revision"])),
                 "quantization_census": self.quantization_census()}
 
     def quantization_census(self) -> dict:

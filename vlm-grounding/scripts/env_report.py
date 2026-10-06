@@ -78,6 +78,17 @@ def smi_snapshot() -> dict | None:
     return None
 
 
+def smi_memory_used_mib():
+    """GPU 0 memory.used from nvidia-smi (MiB) or None. Call BEFORE this process initializes CUDA, otherwise
+    the process's own CUDA context (a few hundred MiB) is counted as 'used by others'."""
+    q = _smi(["--query-gpu=memory.used", "--format=csv,noheader,nounits"])
+    rows = parse_csv_query(q, ["memory.used"]) if q else []
+    try:
+        return float(rows[0]["memory.used"]) if rows and rows[0]["memory.used"] is not None else None
+    except ValueError:
+        return None
+
+
 def collect() -> dict:
     out = {"platform": platform.platform(), "python": platform.python_version(), "cpu_logical_threads": os.cpu_count(),
            "cpu_name": platform.processor() or None, "ram_total_gib": ram_gib(), "gpu": None, "gpu_processes": None,

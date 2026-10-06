@@ -1,0 +1,14 @@
+# TEST split. Only after the dev run was reviewed; point thresholds_file at that dev run's thresholds.json.
+name: cf_synthetic_blip2_test
+task: counterfactual_synthetic
+model:
+  from_file: configs/models/blip2_opt_2p7b.yaml
+dataset:
+  our_split: test
+  n_scenes: 150
+  seed: 1
+  split_seed: 0
+probe:
+  templates: [0, 1, 2]
+  blind_baseline: true
+  thresholds_file: results/REPLACE_WITH_DEV_RUN_DIR/thresholds.json

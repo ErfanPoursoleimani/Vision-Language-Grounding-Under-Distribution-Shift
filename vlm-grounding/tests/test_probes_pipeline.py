@@ -146,3 +146,44 @@ def test_test_access_log(tmp_path):
     log_test_access(tmp_path / "log.jsonl", config="c", n=1)
     log_test_access(tmp_path / "log.jsonl", config="c", n=2)
     assert len((tmp_path / "log.jsonl").read_text().splitlines()) == 2
+
+
+def test_calibration_and_analysis():
+    from src.evaluation import analysis as A
+    # template 0 unbiased, template 1 shifted by +1.5 (all 'yes' at threshold 0): calibrated thresholds must differ by ~1.5
+    rows = []
+    for i in range(50):
+        for t, shift in ((0, 0.0), (1, 1.5)):
+            rows.append({"image_id": i, "category": "c", "kind": "pos", "label": 1, "template_idx": t, "logodds": 1.0 + shift + 0.01 * (i % 5)})
+            rows.append({"image_id": i, "category": "d", "kind": "random", "label": 0, "template_idx": t, "logodds": -1.0 + shift - 0.01 * (i % 5)})
+    th = A.calibrate_thresholds(rows)
+    assert abs((th[1] - th[0]) - 1.5) < 0.05 and abs(th[0]) < 0.05
+    assert all(v == 1.0 for v in A.pooled_auroc_by_template(rows).values())
+    ba = A.balanced_accuracy(*[__import__("numpy").array([r["logodds"] for r in rows if r["template_idx"] == 1 and r["label"] == l]) for l in (1, 0)], 0.0)
+    assert ba == 0.5  # raw threshold 0 fails on the shifted template (everything 'yes') although AUROC is perfect
+    items = [{"image_id": 1, "category": "x", "kind": "popular", "label": 0, "pred": 1, "blind_pred": 0},
+             {"image_id": 1, "category": "x", "kind": "adversarial", "label": 0, "pred": 1, "blind_pred": 0},
+             {"image_id": 1, "category": "y", "kind": "random", "label": 0, "pred": 0, "blind_pred": 1}]
+    assert A.negative_overlap(items) == {"n_negative_items": 3, "n_unique_negative_pairs": 2, "n_pairs_in_multiple_kinds": 1}
+    assert A.language_prior_share(items)["n_fp_where_blind_also_yes"] == 0
+
+
+def _cfg(coco, tmp_path, **probe):
+    return {"name": "e2e2", "task": "pope_style", "cache": str(tmp_path / "c2.sqlite"), "probe": probe,
+            "dataset": {"root": str(coco), "split": "val2017", "our_split": "dev", "split_seed": 0, "n_images": 5, "seed": 0}}
+
+
+def test_dev_run_writes_thresholds_and_test_requires_them(coco, tmp_path):
+    m = build_model({"type": "dummy_brightness"})
+    out = run_pope_style(_cfg(coco, tmp_path), m, tmp_path / "res", allow_testing_only=True, progress=False, test_log=None)
+    thr = json.loads((out / "thresholds.json").read_text())
+    assert set(thr["thresholds"]) == {"0", "1", "2"} and (out / "results_raw_threshold.json").exists()
+    assert "optimistic" in json.loads((out / "manifest.json").read_text())["threshold_mode"]
+    cfg = _cfg(coco, tmp_path)
+    cfg["dataset"]["our_split"] = "test"
+    with pytest.raises(SystemExit, match="frozen thresholds"):
+        run_pope_style(cfg, m, tmp_path / "res2", allow_testing_only=True, progress=False, test_log=None)
+    cfg = _cfg(coco, tmp_path, thresholds_file=str(out / "thresholds.json"))
+    cfg["dataset"]["our_split"] = "test"
+    out2 = run_pope_style(cfg, m, tmp_path / "res3", allow_testing_only=True, progress=False, test_log=None)
+    assert "frozen" in json.loads((out2 / "manifest.json").read_text())["threshold_mode"]

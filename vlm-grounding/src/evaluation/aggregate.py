@@ -23,12 +23,15 @@ def _subset(rows: List[dict], neg_kind: str) -> List[dict]:
     return [r for r in rows if r["kind"] in ("pos", neg_kind)]
 
 
-def aggregate_probes(rows: List[dict], threshold: float = 0.0, n_boot: int = 1000, seed: int = 0) -> dict:
+def aggregate_probes(rows: List[dict], threshold: float = 0.0, n_boot: int = 1000, seed: int = 0,
+                     per_template_thresholds: Dict[int, float] | None = None) -> dict:
     """Per negative-sampling subset (pos + one negative kind, 50/50 balanced), for the model and the blind baseline:
     metrics per template, mean/min/max over templates, and a bootstrap CI (resampling images) on template-averaged accuracy."""
     systems = ["model"] + (["blind"] if rows and rows[0].get("blind_logodds") is not None else [])
     key = {"model": "logodds", "blind": "blind_logodds"}
-    out: dict = {"threshold": threshold, "subsets": {}}
+    thr_of = (lambda t: per_template_thresholds.get(t, threshold)) if per_template_thresholds else (lambda t: threshold)
+    mean_thr = float(np.mean(list(per_template_thresholds.values()))) if per_template_thresholds else threshold
+    out: dict = {"threshold": mean_thr, "per_template_thresholds": per_template_thresholds, "subsets": {}}
     for nk in NEG_KINDS:
         sub = _subset(rows, nk)
         if not sub:
@@ -41,7 +44,7 @@ def aggregate_probes(rows: List[dict], threshold: float = 0.0, n_boot: int = 100
                 rt = [r for r in sub if r["template_idx"] == t]
                 lo = [r[key[sysname]] for r in rt]
                 lab = [r["label"] for r in rt]
-                m = binary_metrics([int(x > threshold) for x in lo], lab)
+                m = binary_metrics([int(x > thr_of(t)) for x in lo], lab)
                 m["auroc"] = auroc(lo, lab)
                 per_t.append(m)
             agg = {}
@@ -52,7 +55,7 @@ def aggregate_probes(rows: List[dict], threshold: float = 0.0, n_boot: int = 100
             img_of: Dict[tuple, int] = {}
             for r in sub:
                 k = (r["image_id"], r["category"], r["kind"])
-                corr[k].append(float((r[key[sysname]] > threshold) == bool(r["label"])))
+                corr[k].append(float((r[key[sysname]] > thr_of(r["template_idx"])) == bool(r["label"])))
                 img_of[k] = r["image_id"]
             ks = sorted(corr)
             est, lo_, hi_ = bootstrap_ci([float(np.mean(corr[k])) for k in ks], n_boot=n_boot, seed=seed,

@@ -32,6 +32,9 @@ python -m bitsandbytes                      # diagnostic: should report a workin
 ```
 `pip install bitsandbytes` is documented to work on Windows with prebuilt CUDA binaries (third-party guide and the library's install docs; I have not run it on your machine). If the diagnostic fails, use WSL2 (set its memory limit in `.wslconfig`).
 
+### 0.2 Measured with BLIP-2 OPT-2.7B (NF4 language model, fp16 vision tower), 2026-10-04
+VRAM after load 3.70 GiB, peak 3.74 GiB, reserved 3.80 GiB (estimate was ≈ 4.3 GiB, so the estimator is conservative here). 8.4 yes/no probes/s on one repeated image; ≈ 5.6 probes/s effective over a full run (image loading, blind probes, cache). First load took 1,219 s. A 1,000-image POPE-style test run (36,000 probes) is therefore ≈ 1.8 h. The smoke test's "VRAM used by others" figure (0.97 GiB) was taken after CUDA init and includes this process's own context; the scripts now read `nvidia-smi` before CUDA init, so **re-run `smoke_model.py` or `env_report.py` to get the real figure** before relying on the 7B budget below.
+
 ## 1. Where the budget goes (est., budget = your measured 5.86 GiB free)
 Reproduce with `python -m src.utils.memory_budget --env results/hardware/env.json ...`. Estimates include 0.4 GiB CUDA context and a 0.75 GiB activation reserve (1.5 GiB for training) — assumptions, to be replaced by profiler numbers.
 

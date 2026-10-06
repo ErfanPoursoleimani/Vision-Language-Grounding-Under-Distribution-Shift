@@ -22,7 +22,9 @@ import yaml
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from src.models import build_model  # noqa: E402
+import env_report  # noqa: E402
 
 
 def synthetic_images():
@@ -48,15 +50,14 @@ def main() -> int:
     if a.image:
         imgs[0] = Image.open(a.image).convert("RGB")
 
-    report: dict = {"model": model.metadata(), "checks": {}, "outputs": {}}
+    report: dict = {"model": model.metadata(), "checks": {}, "outputs": {},
+                    "nvidia_smi_used_mib_before_cuda_init": env_report.smi_memory_used_mib()}
     torch = None
     try:
         import torch  # noqa: F811
     except ImportError:
         pass
     if torch is not None and torch.cuda.is_available():
-        free0, total = torch.cuda.mem_get_info()
-        report["vram_used_by_others_before_load_gib"] = (total - free0) / 2 ** 30
         torch.cuda.reset_peak_memory_stats()
 
     ok = True

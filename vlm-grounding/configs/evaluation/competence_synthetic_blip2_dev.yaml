@@ -1,0 +1,13 @@
+# What can BLIP-2 perceive on the ORIGINAL synthetic images? (colour atoms, shape atoms, binding, relations)
+name: competence_synthetic_blip2_dev
+task: synthetic_competence
+model:
+  from_file: configs/models/blip2_opt_2p7b.yaml
+dataset:
+  our_split: dev
+  n_scenes: 40
+  seed: 0
+  split_seed: 0
+probe:
+  templates: [0, 1, 2]
+  blind_baseline: true
