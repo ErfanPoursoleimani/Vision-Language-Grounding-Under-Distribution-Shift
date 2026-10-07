@@ -1,0 +1,14 @@
+# Competence on ORIGINAL images with medium objects (is the earlier weak result due to my small-object scene design?)
+name: competence_synthetic_blip2_dev_medium
+task: synthetic_competence
+model:
+  from_file: configs/models/blip2_opt_2p7b.yaml
+dataset:
+  our_split: dev
+  n_scenes: 40
+  seed: 0
+  split_seed: 0
+  style: medium
+probe:
+  templates: [0, 1, 2]
+  blind_baseline: true

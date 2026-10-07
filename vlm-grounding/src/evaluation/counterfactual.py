@@ -17,25 +17,25 @@ from tqdm import tqdm
 
 from ..datasets.splits import assign_split
 from ..metrics.classification import auroc
-from ..perturbations.synthetic import (EXISTS_TEMPLATES, Pair, build_pairs, question_text, random_scene, render)
+from ..perturbations.synthetic import (EXISTS_TEMPLATES, STYLES, Pair, build_pairs, question_text, random_scene, render)
 
 N_TEMPLATES = len(EXISTS_TEMPLATES)
 
 
-def scenes_for_split(split: str, n: int, seed: int, split_seed: int = 0, fractions=None) -> list:
+def scenes_for_split(split: str, n: int, seed: int, split_seed: int = 0, fractions=None, style: str = "small") -> list:
     fr = fractions or {"dev": 0.3, "test": 0.7}
     out, sid = [], 0
     while len(out) < n:
         if assign_split(sid, split_seed, fr) == split:
-            out.append((sid, random_scene(random.Random(f"{seed}:{sid}"))))
+            out.append((sid, random_scene(random.Random(f"{seed}:{sid}"), style=STYLES[style])))
         sid += 1
     return out
 
 
-def make_pairs(split: str, n_scenes: int, seed: int, split_seed: int = 0) -> List[Pair]:
+def make_pairs(split: str, n_scenes: int, seed: int, split_seed: int = 0, style: str = "small") -> List[Pair]:
     pairs: List[Pair] = []
-    for sid, scene in scenes_for_split(split, n_scenes, seed, split_seed):
-        pairs += build_pairs(sid, scene, random.Random(f"{seed}:{sid}:pairs"))
+    for sid, scene in scenes_for_split(split, n_scenes, seed, split_seed, style=style):
+        pairs += build_pairs(sid, scene, random.Random(f"{seed}:{sid}:pairs"), STYLES[style])
     return pairs
 
 
@@ -237,7 +237,7 @@ def run_counterfactual_synthetic(cfg: dict, model, out_root, allow_testing_only:
     split = d.get("our_split", "dev")
     if split == "test" and not pr.get("thresholds_file"):
         raise SystemExit("test runs must use frozen thresholds: set probe.thresholds_file to the thresholds.json of a dev run")
-    pairs = make_pairs(split, d.get("n_scenes", 40), d.get("seed", 0), d.get("split_seed", 0))
+    pairs = make_pairs(split, d.get("n_scenes", 40), d.get("seed", 0), d.get("split_seed", 0), d.get("style", "small"))
     if split == "test" and test_log and not testing_only:
         log_test_access(test_log, config=cfg["name"], model=model.metadata(), n_pairs=len(pairs), git=_git())
     from ..models.cache import CachedVLM

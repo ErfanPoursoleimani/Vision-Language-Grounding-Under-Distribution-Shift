@@ -78,3 +78,44 @@ def test_persistence_is_conditional_on_having_said_yes_before():
     # evidence added (no->yes): model said no before and still no after -> non-detection 1.0
     nd = aggregate_counterfactual(_rows(False, False, 0, 1), None, n_boot=10)[0]["by_edit_type"]["reshape"]
     assert nd["non_detection_rate"]["est"] == 1.0 and nd["miss_after_edit"]["est"] == 1.0
+
+
+def test_default_style_is_bit_identical_to_original_behaviour():
+    import hashlib
+
+    from src.perturbations.synthetic import build_pairs, render
+    h = [hashlib.md5(render(random_scene(random.Random(f"0:{s}"))).tobytes()).hexdigest()[:12] for s in range(6)]
+    assert h == ["651016329eaa", "4269efdbcca0", "9c9bd4a7893d", "847805164f6c", "9ff35c091d2d", "44dd5e84dde9"]
+    sc = random_scene(random.Random("0:3"))
+    ps = build_pairs(3, sc, random.Random("0:3:pairs"))
+    assert hashlib.md5("|".join(p.pair_id + str(len(p.probes)) for p in ps).encode()).hexdigest()[:12] == "74b3a6a1911e"
+
+
+@pytest.mark.parametrize("style", ["medium", "large"])
+def test_larger_styles_respect_constraints_and_stay_exact(style):
+    import math
+
+    from src.perturbations.synthetic import STYLES, build_pairs, detect_colors, render
+    st = STYLES[style]
+    for sid in range(12):
+        sc = random_scene(random.Random(sid), style=st)
+        assert len(sc.objects) in st.n_objects
+        assert all(st.size[0] <= o.size <= st.size[1] for o in sc.objects)
+        assert all(math.hypot(a.cx - b.cx, a.cy - b.cy) >= st.min_dist for i, a in enumerate(sc.objects) for b in sc.objects[i + 1:])
+        for p in build_pairs(sid, sc, random.Random(f"p{sid}"), st):
+            assert set(detect_colors(render(p.cf))) == {o.color for o in p.cf.objects}
+            changed = [x for x in p.probes if x.gold_orig != x.gold_cf]
+            assert bool(changed) == (p.role == "relevant")
+
+
+def test_reaggregate_script_writes_results_v2(tmp_path):
+    import subprocess
+    import sys
+    cfg = {"name": "rr", "task": "counterfactual_synthetic", "cache": str(tmp_path / "c.sqlite"),
+           "dataset": {"our_split": "dev", "n_scenes": 4, "seed": 0}, "probe": {}}
+    out = TASKS["counterfactual_synthetic"](cfg, build_model({"type": "dummy_color_oracle"}), tmp_path / "res",
+                                            allow_testing_only=True, progress=False, test_log=None)
+    r = subprocess.run([sys.executable, "scripts/reaggregate_counterfactual.py", "--run-dir", str(out)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    v2 = json.loads((out / "results_v2.json").read_text())
+    assert "persistence_rate" in v2["by_edit_type"]["reshape"] and "re-aggregated" in v2["threshold_mode"]

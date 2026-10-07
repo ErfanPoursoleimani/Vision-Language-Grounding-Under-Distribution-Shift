@@ -24,18 +24,18 @@ import numpy as np
 from tqdm import tqdm
 
 from ..metrics.classification import auroc
-from ..perturbations.synthetic import LeftOf, answer, competence_items, question_text, render
+from ..perturbations.synthetic import STYLES, LeftOf, answer, competence_items, question_text, render
 from .counterfactual import cluster_bootstrap, scenes_for_split
 
 GROUPS = {"color_atoms": ["color_atom"], "shape_atoms": ["shape_atom"], "binding": ["exists_true", "foil"],
           "easy_existence": ["exists_true", "easy_neg"], "relation": ["relation"]}
 
 
-def run_competence(model, scenes, templates=(0, 1, 2), blind=True, seed=0, progress=True) -> List[dict]:
+def run_competence(model, scenes, templates=(0, 1, 2), blind=True, seed=0, progress=True, style: str = "small") -> List[dict]:
     rows = []
     for sid, scene in tqdm(scenes, disable=not progress, desc="scenes"):
         img = render(scene)
-        for ii, (kind, q) in enumerate(competence_items(scene, random.Random(f"{seed}:{sid}:comp"))):
+        for ii, (kind, q) in enumerate(competence_items(scene, random.Random(f"{seed}:{sid}:comp"), STYLES[style])):
             gold = int(answer(scene, q))
             pair_key = None
             if isinstance(q, LeftOf):
@@ -98,12 +98,12 @@ def run_synthetic_competence(cfg: dict, model, out_root, allow_testing_only: boo
     split = d.get("our_split", "dev")
     if split == "test" and not pr.get("thresholds_file"):
         raise SystemExit("test runs must use frozen thresholds: set probe.thresholds_file to the thresholds.json of a dev run")
-    scenes = scenes_for_split(split, d.get("n_scenes", 40), d.get("seed", 0), d.get("split_seed", 0))
+    scenes = scenes_for_split(split, d.get("n_scenes", 40), d.get("seed", 0), d.get("split_seed", 0), style=d.get("style", "small"))
     if split == "test" and test_log and not testing_only:
         log_test_access(test_log, config=cfg["name"], model=model.metadata(), n_scenes=len(scenes), git=_git())
     m = CachedVLM(model, cfg.get("cache", f"cache/{model.name}.sqlite"))
     t0 = time.perf_counter()
-    rows = run_competence(m, scenes, tuple(pr.get("templates", (0, 1, 2))), pr.get("blind_baseline", True), d.get("seed", 0), progress)
+    rows = run_competence(m, scenes, tuple(pr.get("templates", (0, 1, 2))), pr.get("blind_baseline", True), d.get("seed", 0), progress, d.get("style", "small"))
     if pr.get("thresholds_file"):
         th = {int(k): float(v) for k, v in json.loads(Path(pr["thresholds_file"]).read_text())["thresholds"].items()}
         mode = f"frozen from {pr['thresholds_file']}"

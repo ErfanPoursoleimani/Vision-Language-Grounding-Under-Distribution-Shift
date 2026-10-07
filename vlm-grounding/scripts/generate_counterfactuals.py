@@ -28,12 +28,13 @@ def main() -> int:
     ap.add_argument("--split", default="dev", choices=["dev", "test"])
     ap.add_argument("--n-scenes", type=int, default=40)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--style", default="small", choices=["small", "medium", "large"])
     ap.add_argument("--out", default="data/synthetic/dev")
     ap.add_argument("--no-images", action="store_true", help="only write preview + pairs.jsonl")
     a = ap.parse_args()
     out = Path(a.out)
     (out / "images").mkdir(parents=True, exist_ok=True)
-    pairs = make_pairs(a.split, a.n_scenes, a.seed)
+    pairs = make_pairs(a.split, a.n_scenes, a.seed, style=a.style)
     with open(out / "pairs.jsonl", "w") as f:
         for p in pairs:
             f.write(json.dumps({"pair_id": p.pair_id, "edit_type": p.edit_type, "role": p.role, "area_ratio": p.area_ratio,

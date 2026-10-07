@@ -23,6 +23,20 @@ MIN_SIZE, MAX_SIZE, MIN_DIST, MIN_DX = 56, 84, 100, 60
 
 
 @dataclass(frozen=True)
+class Style:
+    """Scene difficulty. 'small' is the original setting (kept bit-identical for reproducibility)."""
+    name: str = "small"
+    size: tuple = (MIN_SIZE, MAX_SIZE)
+    min_dist: int = MIN_DIST
+    min_dx: int = MIN_DX
+    n_objects: tuple = (3, 4)
+
+
+STYLES = {"small": Style(), "medium": Style("medium", (100, 130), 140, 80, (2, 3)),
+          "large": Style("large", (150, 190), 170, 90, (2, 2))}
+
+
+@dataclass(frozen=True)
 class Obj:
     color: str
     shape: str
@@ -137,23 +151,23 @@ def question_text(q, template_idx: int) -> str:
 
 # ---------------------------------------------------------------- scene generation
 def _place(rng: random.Random, existing: List[Obj], color: str, shape: Optional[str] = None,
-           size: Optional[int] = None) -> Optional[Obj]:
+           size: Optional[int] = None, style: Style = STYLES["small"]) -> Optional[Obj]:
     for _ in range(300):
-        s = size or rng.randint(MIN_SIZE, MAX_SIZE)
+        s = size or rng.randint(*style.size)
         m = s // 2 + 10
         cx, cy = rng.randint(m, CANVAS - m), rng.randint(m, CANVAS - m)
-        if all(math.hypot(cx - o.cx, cy - o.cy) >= MIN_DIST for o in existing):
+        if all(math.hypot(cx - o.cx, cy - o.cy) >= style.min_dist for o in existing):
             return Obj(color, shape or rng.choice(SHAPES), cx, cy, s)
     return None
 
 
-def random_scene(rng: random.Random, n_objects: Optional[int] = None) -> Scene:
-    n = n_objects or rng.choice([3, 4])
+def random_scene(rng: random.Random, n_objects: Optional[int] = None, style: Style = STYLES["small"]) -> Scene:
+    n = n_objects or rng.choice(list(style.n_objects))
     for _ in range(100):
         colors = rng.sample(list(COLORS), n)
         objs: List[Obj] = []
         for c in colors:
-            o = _place(rng, objs, c)
+            o = _place(rng, objs, c, style=style)
             if o is None:
                 break
             objs.append(o)
@@ -258,7 +272,7 @@ def _closest_area(scene: Scene, target: int, rng: random.Random) -> Tuple[Option
     return k, scene.objects[k].area / ta
 
 
-def build_pairs(scene_id: int, scene: Scene, rng: random.Random) -> List[Pair]:
+def build_pairs(scene_id: int, scene: Scene, rng: random.Random, style: Style = STYLES["small"]) -> List[Pair]:
     pairs: List[Pair] = []
     O = scene.objects
     n = len(O)
@@ -321,7 +335,7 @@ def build_pairs(scene_id: int, scene: Scene, rng: random.Random) -> List[Pair]:
                 pid + "-relevant", ratio, keep_only_unchanged=True, touched={O[m].color}))
 
     # ---- swap positions (relation flips)
-    sep = [(a, b) for a in range(n) for b in range(a + 1, n) if abs(O[a].cx - O[b].cx) >= MIN_DX]
+    sep = [(a, b) for a in range(n) for b in range(a + 1, n) if abs(O[a].cx - O[b].cx) >= style.min_dx]
     if sep:
         a, b = rng.choice(sep)
         q = LeftOf(O[a].color, O[a].shape, O[b].color, O[b].shape)
@@ -336,9 +350,9 @@ def build_pairs(scene_id: int, scene: Scene, rng: random.Random) -> List[Pair]:
 
     # ---- insert
     if len(unused) >= 2:
-        size = rng.randint(MIN_SIZE, MAX_SIZE)
-        new = _place(rng, list(O), unused[0], size=size)
-        ctrl = _place(rng, list(O) + ([new] if new else []), unused[1], size=size)
+        size = rng.randint(*style.size)
+        new = _place(rng, list(O), unused[0], size=size, style=style)
+        ctrl = _place(rng, list(O) + ([new] if new else []), unused[1], size=size, style=style)
         if new is not None:
             qs = [(Exists(new.color, new.shape), "exists"), (Exists(O[0].color, O[0].shape), "other")]
             pid = f"{scene_id}-insert"
@@ -359,7 +373,7 @@ def build_pairs(scene_id: int, scene: Scene, rng: random.Random) -> List[Pair]:
 
 
 # ---------------------------------------------------------------- competence items (original images only)
-def competence_items(scene: Scene, rng: random.Random) -> list:
+def competence_items(scene: Scene, rng: random.Random, style: Style = STYLES["small"]) -> list:
     """(kind, question) on ONE scene. kinds: color_atom, shape_atom, exists_true, foil, easy_neg, relation.
     Used to find out what the model can perceive at all, before interpreting any sensitivity number."""
     O = scene.objects
@@ -379,7 +393,7 @@ def competence_items(scene: Scene, rng: random.Random) -> list:
         items.append(("foil", q))
     for c in rng.sample(absent_c, min(2, len(absent_c))):
         items.append(("easy_neg", Exists(c, rng.choice(SHAPES))))
-    sep = [(a, b) for a in range(len(O)) for b in range(a + 1, len(O)) if abs(O[a].cx - O[b].cx) >= MIN_DX]
+    sep = [(a, b) for a in range(len(O)) for b in range(a + 1, len(O)) if abs(O[a].cx - O[b].cx) >= style.min_dx]
     for a, b in rng.sample(sep, min(2, len(sep))):
         items.append(("relation", LeftOf(O[a].color, O[a].shape, O[b].color, O[b].shape)))
         items.append(("relation", LeftOf(O[b].color, O[b].shape, O[a].color, O[a].shape)))
