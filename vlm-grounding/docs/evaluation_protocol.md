@@ -53,6 +53,8 @@ Three output modes, always reported separately: **probe** (closed yes/no, count,
 
 Rules: splits are by **image id** (and by source image for all derived edits); adaptation uses COCO train only; all tuning (λ, margin, rank, steps) on a validation split disjoint from every test split; each test split is run once per frozen configuration and every test run is logged (`results/**/manifest.json`); prompt wording is fixed on validation.
 
+**Blind baselines differ by model.** BLIP-2 needs pixels, so its blind baseline is a gray image; the chat backend defaults to `blind_mode: text_only` (no image in the message). Blind numbers are compared within a model, never across models.
+
 **Blind-baseline caveat (added after the first dev run).** A gray image measures the response to *absence of evidence*, not necessarily the language prior (BLIP-2 answered "no" to ~92% of gray-image questions). Scene-conditioned priors need a different control: same scene with the target object edited out (phase 5), and/or a mismatched-image control. Failure-case labels such as `language_prior_candidate` are therefore weak evidence.
 
 **Overlapping negatives.** Popular and adversarial negatives overlap (457 of 1,332 unique negative pairs appeared in more than one kind on dev); compare kinds with paired statistics on the shared items, not as independent samples.

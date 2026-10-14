@@ -2,3 +2,4 @@ from .base import Capability, ImageContext, UnsupportedCapability, VLM, VLMOutpu
 from .registry import available_models, build_model, register_model  # noqa: F401
 from . import dummy  # noqa: F401  (registers 'dummy_brightness')
 from . import hf_blip2  # noqa: F401  (registers 'hf_blip2'; torch/transformers imported lazily)
+from . import hf_chat_vlm  # noqa: F401  (registers 'hf_chat_vlm'; torch/transformers imported lazily)

@@ -80,6 +80,11 @@ class VLM(ABC):
     def score_in_context(self, ctx: ImageContext, suffix: str, continuation: str) -> float:
         return self.score(ctx.image, ctx.prefix + suffix, continuation)
 
+    def closed_question(self, question: str) -> str:
+        """Model-specific wording used for yes/no probing (e.g. an 'Answer with Yes or No.' suffix).
+        score(img, closed_question(q), 'Yes') must agree with yes_no_logodds(img, q)."""
+        return question
+
     def yes_no_logodds(self, image: Any, question: str) -> float:
         """log p('Yes') - log p('No') for a closed question (POPE-style probe)."""
         return self.score(image, question, "Yes") - self.score(image, question, "No")

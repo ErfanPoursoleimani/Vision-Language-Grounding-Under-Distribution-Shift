@@ -83,10 +83,14 @@ def main() -> int:
         report["outputs"] = {"caption_A": cap.text, "vqa_A": vqa.text, "question": q}
         print("caption A :", cap.text, "\nvqa A     :", vqa.text)
 
-        s_yes, s_no = model.score(imgs[0], q, "Yes"), model.score(imgs[0], q, "No")
+        cq = model.closed_question(q)
+        s_yes, s_no = model.score(imgs[0], cq, "Yes"), model.score(imgs[0], cq, "No")
         lo1 = model.yes_no_logodds(imgs[0], q)
         lo_blind = model.yes_no_logodds(None, q)
         report["outputs"].update(score_yes=s_yes, score_no=s_no, logodds_single_forward=lo1, logodds_blind=lo_blind)
+        if hasattr(model, "vision_quantized") and model.config.get("quantize", "none") != "none":
+            check("vision tower NOT quantized (quantize_vision=false)", model.vision_quantized() == bool(model.config.get("quantize_vision")),
+                  str(report.get("runtime", {}).get("quantization_census")))
         check("log-probs finite and <= 0", all(math.isfinite(x) and x <= 1e-3 for x in (s_yes, s_no)))
         check("p(Yes)+p(No) <= 1", math.exp(s_yes) + math.exp(s_no) <= 1.001, f"{math.exp(s_yes)+math.exp(s_no):.4f}")
         check("single-forward log-odds == score(Yes)-score(No)", abs(lo1 - (s_yes - s_no)) < 0.15,

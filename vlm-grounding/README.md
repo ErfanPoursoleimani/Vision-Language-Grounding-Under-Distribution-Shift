@@ -7,7 +7,7 @@ Research project: how robustly do open vision-language models ground their text 
 |---|---|
 | 1 Literature review | Draft; 8 references verified, the rest flagged unverified; 2025–2026 sweep not done (`docs/literature_review.md`) |
 | 1b Evaluation protocol | Draft v0.1, thresholds not frozen (`docs/evaluation_protocol.md`) |
-| 2 Model abstraction | Interface, registry, disk cache, shared-image-context API, test-only dummy: done. BLIP-2 backend written (`src/models/hf_blip2.py`) but **not yet run on a GPU**; CLIP and LLaVA-family backends: not yet |
+| 2 Model abstraction | Interface, registry, disk cache, shared-image-context API, test-only dummy: done. BLIP-2 backend run on GPU (smoke test passed); generic chat-VLM backend for Qwen3-VL (`hf_chat_vlm`) written, **not yet run**; CLIP and LLaVA backends: not yet |
 | Hardware | VRAM budget estimator + GPU profiler written (`docs/hardware_plan.md`); **never run on a GPU yet** |
 | 3–4 Dataset loader + baseline evaluation | COCO loader, hashed dev/test split with test-access log, POPE-style probes, blind baseline, aggregation, CSV/JSON/plots/failure cases: written, tested on a synthetic fixture with the dummy model. **Not yet run on real COCO + BLIP-2** |
 | 5–6 Perturbation generator + counterfactual benchmark | **Synthetic track** written and tested (exact edits, matched controls, binding foils, independent pixel verification, AFR/SFR/CSS/CPA metrics, thresholds frozen dev→test). Verified with test models only; **not yet run on BLIP-2**. Real-photo track (COCO masks + inpainting): not started |
@@ -18,7 +18,7 @@ No results exist yet. Nothing in this repo reports model outputs.
 ## Quickstart
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                                   # 56 tests
+python -m pytest -q                                   # 59 tests
 python scripts/run_evaluation.py --config configs/evaluation/example_dryrun.yaml --dry-run
 python scripts/env_report.py --out results/hardware/env.json   # what is using your VRAM / RAM / power limit
 python scripts/run_evaluation.py --config configs/evaluation/pope_style_blip2_dev.yaml   # needs data/coco, see docs/datasets.md
@@ -35,7 +35,8 @@ python -m src.utils.memory_budget --quantized-params-b 2.8 --unquantized-params-
 4. Competence check on original images (~8 min): `python scripts/run_evaluation.py --config configs/evaluation/competence_synthetic_blip2_dev.yaml`
 4b. Scene-difficulty check (is the weak competence due to small objects?): `competence_synthetic_blip2_dev_medium.yaml` and `..._large.yaml` (same task, bigger/fewer objects; `dataset.style`). Image style is also selectable for `generate_counterfactuals.py --style`.
 5. Recompute a finished run (writes `results_v2.json` INSIDE that run's own folder; the competence runs have no such file) with the current metric code (no model needed): `python scripts/reaggregate_counterfactual.py --run-dir results/<run>`
-6. Test run only with frozen thresholds (`cf_synthetic_blip2_test.yaml`).
+6. Second model family: `python scripts/smoke_model.py --config configs/models/qwen3vl_4b_instruct_nf4.yaml --out results/hardware/smoke_qwen3vl.json`, then `competence_synthetic_qwen3vl_dev_small.yaml` and `..._large.yaml`.
+7. Test run only with frozen thresholds (`cf_synthetic_blip2_test.yaml`).
 
 ## Pinning the model revision (do before any test run)
 `resolved_commit_hash` was null in the first run. The snapshot folder name is the commit hash:

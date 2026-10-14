@@ -1,0 +1,14 @@
+# Competence of the SECOND model family on ORIGINAL synthetic images (small objects). Run scripts/smoke_model.py for this model first.
+name: competence_synthetic_qwen3vl_dev_small
+task: synthetic_competence
+model:
+  from_file: configs/models/qwen3vl_4b_instruct_nf4.yaml
+dataset:
+  our_split: dev
+  n_scenes: 40
+  seed: 0
+  split_seed: 0
+  style: small
+probe:
+  templates: [0, 1, 2]
+  blind_baseline: true
