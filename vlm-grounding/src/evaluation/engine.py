@@ -89,4 +89,14 @@ def _comp(cfg, model, out_root, **kw):
     return run_synthetic_competence(cfg, model, out_root, **kw)
 
 
-TASKS = {"pope_style": run_pope_style, "counterfactual_synthetic": _cf, "synthetic_competence": _comp}
+def _pert(cfg, model, out_root, **kw):
+    from .robustness import run_pope_perturbed
+    return run_pope_perturbed(cfg, model, out_root, **kw)
+
+
+def _compdeg(cfg, model, out_root, **kw):
+    from .competence import run_synthetic_competence_degraded
+    return run_synthetic_competence_degraded(cfg, model, out_root, **kw)
+
+
+TASKS = {"synthetic_competence_degraded": _compdeg, "pope_perturbed": _pert, "pope_style": run_pope_style, "counterfactual_synthetic": _cf, "synthetic_competence": _comp}

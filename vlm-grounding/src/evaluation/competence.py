@@ -24,6 +24,7 @@ import numpy as np
 from tqdm import tqdm
 
 from ..metrics.classification import auroc
+from ..perturbations.image_ops import OPS, apply
 from ..perturbations.synthetic import STYLES, LeftOf, answer, competence_items, question_text, render
 from .counterfactual import cluster_bootstrap, scenes_for_split
 
@@ -31,10 +32,14 @@ GROUPS = {"color_atoms": ["color_atom"], "shape_atoms": ["shape_atom"], "binding
           "easy_existence": ["exists_true", "easy_neg"], "relation": ["relation"]}
 
 
-def run_competence(model, scenes, templates=(0, 1, 2), blind=True, seed=0, progress=True, style: str = "small") -> List[dict]:
+def run_competence(model, scenes, templates=(0, 1, 2), blind=True, seed=0, progress=True, style: str = "small",
+                   degrade=None) -> List[dict]:
+    """degrade = (op, severity) applies a label-preserving image degradation (src/perturbations/image_ops.py) before asking."""
     rows = []
     for sid, scene in tqdm(scenes, disable=not progress, desc="scenes"):
         img = render(scene)
+        if degrade is not None:
+            img = apply(img, degrade[0], degrade[1], seed=sid)
         for ii, (kind, q) in enumerate(competence_items(scene, random.Random(f"{seed}:{sid}:comp"), STYLES[style])):
             gold = int(answer(scene, q))
             pair_key = None
@@ -149,5 +154,91 @@ def run_synthetic_competence(cfg: dict, model, out_root, allow_testing_only: boo
         "config": cfg, "model_metadata": model.metadata(), "git_commit": _git(), "python": platform.python_version(),
         "runtime": model.runtime_info() if hasattr(model, "runtime_info") else None, "n_scenes": len(scenes),
         "n_rows": len(rows), "seconds": time.perf_counter() - t0, "cache_hits": m.hits, "cache_misses": m.misses,
+        "threshold_mode": mode}, indent=2, default=str))
+    return out
+
+
+def run_synthetic_competence_degraded(cfg: dict, model, out_root, allow_testing_only: bool = False, progress: bool = True,
+                                      test_log="results/test_access_log.jsonl"):
+    """Competence on ORIGINAL synthetic scenes under degradations: which capability breaks first?
+    Truth stays exact because blur/noise/JPEG/contrast/pixelate cannot change what is in the scene."""
+    from ..datasets.splits import log_test_access
+    from ..models.cache import CachedVLM
+    from .analysis import calibrate_thresholds
+    from .engine import _git
+    testing_only = bool(model.metadata().get("testing_only"))
+    if testing_only and not allow_testing_only:
+        raise SystemExit("refusing to write results for a testing-only model")
+    d, pr = cfg["dataset"], cfg.get("probe", {})
+    split = d.get("our_split", "dev")
+    if split == "test" and not pr.get("thresholds_file"):
+        raise SystemExit("test runs must use frozen thresholds: set probe.thresholds_file to the thresholds.json of a dev run")
+    style = d.get("style", "small")
+    scenes = scenes_for_split(split, d.get("n_scenes", 40), d.get("seed", 0), d.get("split_seed", 0), style=style)
+    if split == "test" and test_log and not testing_only:
+        log_test_access(test_log, config=cfg["name"], model=model.metadata(), n_scenes=len(scenes), git=_git())
+    rb = cfg.get("robustness", {})
+    ops, sevs = rb.get("ops", list(OPS)), rb.get("severities", [1, 3, 5])
+    templates = tuple(pr.get("templates", (0,)))
+    m = CachedVLM(model, cfg.get("cache", f"cache/{model.name}.sqlite"))
+    t0 = time.perf_counter()
+    conds = [("clean", 0)] + [(o, sv) for o in ops for sv in sevs]
+    by_cond: Dict[tuple, List[dict]] = {}
+    for op, sv in conds:
+        rows = run_competence(m, scenes, templates, blind=(op == "clean" and pr.get("blind_baseline", True)), seed=d.get("seed", 0),
+                              progress=progress, style=style, degrade=None if op == "clean" else (op, sv))
+        for r in rows:
+            r["op"], r["severity"] = op, sv
+        by_cond[(op, sv)] = rows
+    clean_rows = by_cond[("clean", 0)]
+    if pr.get("thresholds_file"):
+        th = {int(k): float(v) for k, v in json.loads(Path(pr["thresholds_file"]).read_text())["thresholds"].items()}
+        mode = f"frozen from {pr['thresholds_file']}"
+    else:
+        th = calibrate_thresholds([{"template_idx": r["template_idx"], "label": r["gold"], "logodds": r["logodds"]} for r in clean_rows])
+        mode = "fit on CLEAN images of this dev split (optimistic); applied unchanged to degraded conditions"
+    res: dict = {"thresholds": th, "threshold_mode": mode, "style": style, "conditions": {}}
+    for (op, sv), rows in by_cond.items():
+        res["conditions"].setdefault(op, {})[str(sv)] = aggregate_competence(rows, th)
+    out = Path(out_root) / f"{cfg['name']}_{time.strftime('%Y%m%d-%H%M%S')}"
+    (out / "plots").mkdir(parents=True)
+    with open(out / "per_example.jsonl", "w") as f:
+        for rows in by_cond.values():
+            for r in rows:
+                f.write(json.dumps(r) + "\n")
+    (out / "results.json").write_text(json.dumps(res, indent=2, default=float))
+    if not pr.get("thresholds_file"):
+        (out / "thresholds.json").write_text(json.dumps({"fit_on": f"{cfg['name']} ({split}, clean)", "git": _git(), "thresholds": th}, indent=2))
+    import csv
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    groups = list(GROUPS)
+    with open(out / "results.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["op", "severity", "group", "n_units", "AUROC", "AUROC_lo", "AUROC_hi", "accuracy_at_frozen_threshold"])
+        for op, d_ in res["conditions"].items():
+            for sv, r in d_.items():
+                for g, x in r["groups"].items():
+                    w.writerow([op, sv, g, x["n_units"], x["AUROC"]["est"], x["AUROC"]["lo"], x["AUROC"]["hi"], x["accuracy"]])
+    ops_present = [o for o in res["conditions"] if o != "clean"]
+    if ops_present:
+        fig, axes = plt.subplots(1, len(ops_present), figsize=(3.2 * len(ops_present), 3.6), sharey=True, squeeze=False)
+        clean = res["conditions"]["clean"]["0"]["groups"]
+        for ax, op in zip(axes[0], ops_present):
+            sv = sorted(res["conditions"][op], key=int)
+            for g in groups:
+                if g not in clean:
+                    continue
+                ys = [clean[g]["AUROC"]["est"]] + [res["conditions"][op][s]["groups"][g]["AUROC"]["est"] if g in res["conditions"][op][s]["groups"] else np.nan for s in sv]
+                ax.plot([0] + [int(s) for s in sv], ys, marker="o", label=g)
+            ax.axhline(0.5, color="gray", ls=":", lw=0.8); ax.set_title(op); ax.set_xlabel("severity (0 = clean)"); ax.set_ylim(0.3, 1.03)
+        axes[0][0].set_ylabel("AUROC"); axes[0][-1].legend(fontsize=6)
+        fig.tight_layout(); fig.savefig(out / "plots" / "degradation_ladder.png", dpi=150); plt.close(fig)
+    (out / "manifest.json").write_text(json.dumps({
+        "config": cfg, "model_metadata": model.metadata(), "git_commit": _git(), "python": platform.python_version(),
+        "runtime": model.runtime_info() if hasattr(model, "runtime_info") else None, "n_scenes": len(scenes),
+        "n_conditions": len(conds), "seconds": time.perf_counter() - t0, "cache_hits": m.hits, "cache_misses": m.misses,
         "threshold_mode": mode}, indent=2, default=str))
     return out

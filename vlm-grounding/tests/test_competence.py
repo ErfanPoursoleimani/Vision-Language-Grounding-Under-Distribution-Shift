@@ -119,3 +119,49 @@ def test_reaggregate_script_writes_results_v2(tmp_path):
     assert r.returncode == 0, r.stderr
     v2 = json.loads((out / "results_v2.json").read_text())
     assert "persistence_rate" in v2["by_edit_type"]["reshape"] and "re-aggregated" in v2["threshold_mode"]
+
+
+class _Recorder:
+    """Minimal model that records the images it is asked about (testing only)."""
+    name = "rec"
+
+    def __init__(self):
+        self.images = []
+
+    def metadata(self):
+        return {"name": "rec", "testing_only": True}
+
+    def yes_no_logodds(self, image, question):
+        self.images.append(None if image is None else image.copy())
+        return 0.0
+
+
+def test_run_competence_applies_degradation():
+    from src.evaluation.competence import run_competence
+    from src.evaluation.counterfactual import scenes_for_split
+    from src.perturbations.image_ops import apply
+    from src.perturbations.synthetic import render
+    scenes = scenes_for_split("dev", 1, 0)
+    a, b = _Recorder(), _Recorder()
+    run_competence(a, scenes, (0,), blind=False, progress=False)
+    run_competence(b, scenes, (0,), blind=False, progress=False, degrade=("noise", 3))
+    sid, sc = scenes[0]
+    assert a.images[0].tobytes() == render(sc).tobytes()
+    assert b.images[0].tobytes() == apply(render(sc), "noise", 3, seed=sid).tobytes() != a.images[0].tobytes()
+
+
+def test_degraded_competence_end_to_end(tmp_path):
+    cfg = {"name": "cd", "task": "synthetic_competence_degraded", "cache": str(tmp_path / "c.sqlite"),
+           "dataset": {"our_split": "dev", "n_scenes": 4, "seed": 0}, "probe": {"templates": [0]},
+           "robustness": {"ops": ["blur", "noise"], "severities": [1, 5]}}
+    m = build_model({"type": "dummy_color_oracle"})
+    out = TASKS["synthetic_competence_degraded"](cfg, m, tmp_path / "res", allow_testing_only=True, progress=False, test_log=None)
+    for f in ("results.json", "results.csv", "thresholds.json", "manifest.json", "plots/degradation_ladder.png", "per_example.jsonl"):
+        assert (out / f).exists(), f
+    r = json.loads((out / "results.json").read_text())
+    assert set(r["conditions"]) == {"clean", "blur", "noise"} and set(r["conditions"]["blur"]) == {"1", "5"}
+    assert r["conditions"]["clean"]["0"]["groups"]["color_atoms"]["AUROC"]["est"] == 1.0
+    assert "CLEAN" in r["threshold_mode"]
+    cfg["dataset"]["our_split"] = "test"
+    with pytest.raises(SystemExit, match="frozen thresholds"):
+        TASKS["synthetic_competence_degraded"](cfg, m, tmp_path / "r2", allow_testing_only=True, progress=False, test_log=None)

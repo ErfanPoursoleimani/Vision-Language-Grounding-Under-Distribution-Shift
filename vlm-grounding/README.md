@@ -11,14 +11,15 @@ Research project: how robustly do open vision-language models ground their text 
 | Hardware | VRAM budget estimator + GPU profiler written (`docs/hardware_plan.md`); **never run on a GPU yet** |
 | 3–4 Dataset loader + baseline evaluation | COCO loader, hashed dev/test split with test-access log, POPE-style probes, blind baseline, aggregation, CSV/JSON/plots/failure cases: written, tested on a synthetic fixture with the dummy model. **Not yet run on real COCO + BLIP-2** |
 | 5–6 Perturbation generator + counterfactual benchmark | **Synthetic track** written and tested (exact edits, matched controls, binding foils, independent pixel verification, AFR/SFR/CSS/CPA metrics, thresholds frozen dev→test). Verified with test models only; **not yet run on BLIP-2**. Real-photo track (COCO masks + inpainting): not started |
-| 7–12 | Not started (CHAIR-style caption task, interventions, mitigation, robustness sweeps, ablations, paper) |
+| 10 Robustness | **Label-preserving degradations** (blur, noise, JPEG, contrast, pixelate; 5 severities) with thresholds frozen on clean data, AUROC drop with CIs, consistency: written and tested with the dummy model; **not yet run on a real model**. Crop/occlusion deliberately live in the counterfactual track (they can change the correct answer) |
+| 7–9, 11–12 | Not started (CHAIR-style caption task, layer-wise interventions, mitigation, ablations, paper) |
 
 No results exist yet. Nothing in this repo reports model outputs.
 
 ## Quickstart
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                                   # 59 tests
+python -m pytest -q                                   # 71 tests
 python scripts/run_evaluation.py --config configs/evaluation/example_dryrun.yaml --dry-run
 python scripts/env_report.py --out results/hardware/env.json   # what is using your VRAM / RAM / power limit
 python scripts/run_evaluation.py --config configs/evaluation/pope_style_blip2_dev.yaml   # needs data/coco, see docs/datasets.md
@@ -36,7 +37,9 @@ python -m src.utils.memory_budget --quantized-params-b 2.8 --unquantized-params-
 4b. Scene-difficulty check (is the weak competence due to small objects?): `competence_synthetic_blip2_dev_medium.yaml` and `..._large.yaml` (same task, bigger/fewer objects; `dataset.style`). Image style is also selectable for `generate_counterfactuals.py --style`.
 5. Recompute a finished run (writes `results_v2.json` INSIDE that run's own folder; the competence runs have no such file) with the current metric code (no model needed): `python scripts/reaggregate_counterfactual.py --run-dir results/<run>`
 6. Second model family: `python scripts/smoke_model.py --config configs/models/qwen3vl_4b_instruct_nf4.yaml --out results/hardware/smoke_qwen3vl.json`, then `competence_synthetic_qwen3vl_dev_small.yaml` and `..._large.yaml`.
-7. Test run only with frozen thresholds (`cf_synthetic_blip2_test.yaml`).
+7. Robustness (label-preserving degradations; ~1 h for BLIP-2, run it for Qwen too): `python scripts/run_evaluation.py --config configs/evaluation/pope_perturbed_blip2_dev.yaml` (or `..._qwen3vl_dev.yaml`)
+8. Second model, in this order: `cf_synthetic_qwen3vl_dev.yaml` (counterfactual), `competence_degraded_qwen3vl_dev_small.yaml` (which capability breaks first under blur/noise/JPEG/contrast/pixelate on synthetic scenes), `pope_style_qwen3vl_dev.yaml` (COCO, same protocol as BLIP-2), `pope_perturbed_qwen3vl_dev.yaml`. Predictions are written down in `experiments/counterfactual/2026-10-25_competence_qwen3vl_dev.md` BEFORE these runs.
+9. Test run only with frozen thresholds (`cf_synthetic_blip2_test.yaml`).
 
 ## Pinning the model revision (do before any test run)
 `resolved_commit_hash` was null in the first run. The snapshot folder name is the commit hash:

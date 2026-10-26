@@ -1,0 +1,19 @@
+# Which capability breaks first? Competence on ORIGINAL synthetic scenes (small objects, the hardest style) under label-preserving
+# degradations. Qwen3-VL was at ceiling on clean images, so this is where its limits should show. Thresholds fit on clean images.
+# Cost: 16 conditions x 40 scenes x ~21 items x 1 paraphrase ~ 13,000 probes.
+name: competence_degraded_qwen3vl_dev_small
+task: synthetic_competence_degraded
+model:
+  from_file: configs/models/qwen3vl_4b_instruct_nf4.yaml
+dataset:
+  our_split: dev
+  n_scenes: 40
+  seed: 0
+  split_seed: 0
+  style: small
+probe:
+  templates: [0]
+  blind_baseline: true
+robustness:
+  ops: [blur, noise, jpeg, contrast, pixelate]
+  severities: [1, 3, 5]

@@ -1,0 +1,20 @@
+# Robustness of existence probing to label-preserving degradations (blur, noise, jpeg, contrast, pixelate), DEV split.
+# Thresholds are fit on the CLEAN images and applied unchanged to every degraded condition.
+# Cost: (1 + 5 ops x 3 severities) x 100 images x 12 items x 1 template = 19,200 probes (~1 h at BLIP-2's measured speed, less if cached).
+name: pope_perturbed_blip2_dev
+task: pope_perturbed
+model:
+  from_file: configs/models/blip2_opt_2p7b.yaml
+dataset:
+  root: data/coco
+  split: val2017
+  split_seed: 0
+  our_split: dev
+  n_images: 100
+  seed: 0
+probe:
+  templates:
+    - "Is there {a_obj} in the image?"
+robustness:
+  ops: [blur, noise, jpeg, contrast, pixelate]
+  severities: [1, 3, 5]
