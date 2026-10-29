@@ -1,0 +1,46 @@
+idx,image_id,category,model_mean_logodds,verdict
+1,131138,chair,4.417,yes
+2,13546,car,2.083,no
+3,524456,dining table,-0.75,yes
+4,533206,dining table,4.167,yes
+5,342367,chair,1.75,no
+6,416104,cup,-0.25,no
+7,59598,dining table,2.167,yes
+8,189436,chair,-0.083,no
+9,506178,chair,3.833,yes
+10,26564,teddy bear,3.25,no
+11,18150,chair,-1.542,no
+12,189078,dining table,2.833,yes
+13,491366,chair,2.333,yes
+14,297084,book,0.25,no
+15,371552,car,-1.333,no
+16,553664,dining table,3.25,yes
+17,479126,cup,-0.583,no
+18,293200,car,-0.75,no
+19,419653,person,0.083,no
+20,304404,chair,-1.333,no
+21,349184,chair,0.167,no
+22,372819,chair,-0.25,no
+23,150638,bench,3.75,no
+24,482275,bottle,-1.167,no
+25,475484,handbag,1.833,no
+26,10707,chair,2.833,yes
+27,119452,bowl,1.333,no
+28,84674,chair,2.375,yes
+29,256916,bottle,-0.917,no
+30,491366,dining table,0.083,no
+31,98392,handbag,-1.333,no
+32,128051,car,4.25,yes
+33,209222,cup,-1.333,no
+34,437205,chair,9.5,yes
+35,463522,handbag,5.25,no
+36,426241,cup,10.083,yes
+37,16958,dining table,1.667,no
+38,110999,dining table,1.5,yes
+39,176037,handbag,0.417,no
+40,494634,dining table,-1.0,no
+41,419653,cup,-1.25,no
+42,533206,cup,2.333,yes
+43,107094,car,-1.333,no
+44,331817,cup,-0.333,no
+45,168883,dining table,-0.083,no

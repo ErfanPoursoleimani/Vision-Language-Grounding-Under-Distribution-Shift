@@ -1,0 +1,26 @@
+idx,image_id,category,model_mean_logodds,verdict
+1,520531,dining table,-0.75,yes
+2,52007,handbag,1.75,no
+3,345356,chair,-2.083,no
+4,494634,chair,-1.75,no
+5,438862,dining table,0.5,yes
+6,160556,dining table,0.833,yes
+7,553664,chair,0.5,no
+8,515077,backpack,0.167,no
+9,476810,handbag,-2.0,no
+10,438862,chair,-1.833,no
+11,150638,chair,0.958,no
+12,404484,dining table,1.333,no
+13,416104,handbag,-1.833,no
+14,308394,chair,1.083,no
+15,416534,person,-1.583,yes
+16,297084,knife,-0.5,no
+17,140583,car,-1.75,yes
+18,245448,car,0.25,no
+19,66635,book,-2.25,no
+20,358525,car,-0.833,no
+21,281759,car,-1.0,no
+22,242411,handbag,0.417,no
+23,449312,dining table,1.75,yes
+24,209222,chair,-0.583,no
+25,256916,person,-0.583,yes

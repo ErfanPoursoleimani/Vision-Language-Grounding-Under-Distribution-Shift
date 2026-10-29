@@ -1,0 +1,32 @@
+idx,image_id,category,model_mean_logodds,verdict
+1,138979,handbag,12.417,no
+2,426241,cup,10.083,yes
+3,437205,chair,9.5,yes
+4,203294,car,8.75,yes
+5,462371,dining table,8.25,yes
+6,277005,bus,7.25,yes
+7,463522,handbag,5.25,no
+8,168883,chair,5.25,no
+9,131138,chair,4.417,yes
+10,128051,car,4.25,yes
+11,48504,chair,4.167,yes
+12,533206,dining table,4.167,yes
+13,506178,chair,3.833,yes
+14,150638,bench,3.75,no
+15,277005,handbag,3.333,no
+16,26564,teddy bear,3.25,no
+17,553664,dining table,3.25,yes
+18,85376,handbag,3.083,no
+19,53529,car,3.083,no
+20,453001,chair,2.917,yes
+21,10707,chair,2.833,yes
+22,10707,car,2.833,no
+23,189078,dining table,2.833,yes
+24,338901,chair,2.583,no
+25,84674,chair,2.375,yes
+26,476810,couch,2.333,yes
+27,491366,chair,2.333,yes
+28,533206,cup,2.333,yes
+29,376264,dining table,2.333,yes
+30,278705,handbag,2.25,no
+31,59598,dining table,2.167,yes

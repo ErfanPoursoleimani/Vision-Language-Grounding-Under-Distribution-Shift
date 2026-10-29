@@ -19,7 +19,7 @@ No results exist yet. Nothing in this repo reports model outputs.
 ## Quickstart
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                                   # 71 tests
+python -m pytest -q                                   # 81 tests
 python scripts/run_evaluation.py --config configs/evaluation/example_dryrun.yaml --dry-run
 python scripts/env_report.py --out results/hardware/env.json   # what is using your VRAM / RAM / power limit
 python scripts/run_evaluation.py --config configs/evaluation/pope_style_blip2_dev.yaml   # needs data/coco, see docs/datasets.md
@@ -39,7 +39,8 @@ python -m src.utils.memory_budget --quantized-params-b 2.8 --unquantized-params-
 6. Second model family: `python scripts/smoke_model.py --config configs/models/qwen3vl_4b_instruct_nf4.yaml --out results/hardware/smoke_qwen3vl.json`, then `competence_synthetic_qwen3vl_dev_small.yaml` and `..._large.yaml`.
 7. Robustness (label-preserving degradations; ~1 h for BLIP-2, run it for Qwen too): `python scripts/run_evaluation.py --config configs/evaluation/pope_perturbed_blip2_dev.yaml` (or `..._qwen3vl_dev.yaml`)
 8. Second model, in this order: `cf_synthetic_qwen3vl_dev.yaml` (counterfactual), `competence_degraded_qwen3vl_dev_small.yaml` (which capability breaks first under blur/noise/JPEG/contrast/pixelate on synthetic scenes), `pope_style_qwen3vl_dev.yaml` (COCO, same protocol as BLIP-2), `pope_perturbed_qwen3vl_dev.yaml`. Predictions are written down in `experiments/counterfactual/2026-10-25_competence_qwen3vl_dev.md` BEFORE these runs.
-9. Test run only with frozen thresholds (`cf_synthetic_blip2_test.yaml`).
+9. Audit COCO false positives, then test H1: `python scripts/audit_failures.py sheet --run-dir results/<your actual pope_style run folder> --coco-root data/coco --n 45 --select stratified --out audit` (answer the question printed above each image in the `verdict` column: yes = object visible, no = not visible, ? = unclear; `--select top` is biased toward annotation gaps), `python scripts/audit_failures.py summarize --csv audit/audit_template.csv`, then `python scripts/analyze_h1.py --run-dir results/<run> --audit audit/audit_template.csv` (several audit files can be given; to finish a census of all candidates use `--select all --exclude <earlier audit CSVs>`).
+10. Test run only with frozen thresholds (`cf_synthetic_blip2_test.yaml`).
 
 ## Pinning the model revision (do before any test run)
 `resolved_commit_hash` was null in the first run. The snapshot folder name is the commit hash:
